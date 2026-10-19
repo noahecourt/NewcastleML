@@ -13,7 +13,8 @@ def main():
     #datapath = Path("../breast1/NACT_extracted")
     datapath = Path("../MAMA_MIA_ISPY2/images")
     clinpath = Path("../clinical_and_imaging_info.xlsx")
-    comb = "S"
+    comb = "M"
+    static_phase = 0 # this is for the static phase 
     preprocess = False
     #print(dataset["NACT_01"]["time_res"])
     # grid search of C for tuning
@@ -22,7 +23,7 @@ def main():
     ks = [5, 10, 25, 50]
 
 
-    x, y, feature_names, patient_ids = build_feature_table(dataset_name="ispy2", num_phases=6, datapath=datapath, clinpath=clinpath, comb=comb, preprocess=preprocess, comp=True)
+    x, y, feature_names, patient_ids = build_feature_table(dataset_name="ispy2", num_phases=6, static_phase=static_phase, datapath=datapath, clinpath=clinpath, comb=comb, preprocess=preprocess, comp=True)
 
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     lst_accu_stratified = []

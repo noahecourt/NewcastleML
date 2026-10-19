@@ -112,12 +112,13 @@ def read_nifti(path: Path): #this is needed currently because I am using compres
                 # missing_ok=True just says to not raise error if the file is already gone
                 # happens in finally so it happens whether sitk.ReadImge() works not throws error
 
-def build_feature_table(dataset_name: str, num_phases: int, datapath: Path, clinpath: Path, comb: str, preprocess: bool, comp: bool=False): # clinroot is the path to the sheet that contains all the clinical data, including pcr. dataset is the dataset name e.g. NACT for the NACT pilot
+def build_feature_table(dataset_name: str, num_phases: int, static_phase: int, datapath: Path, clinpath: Path, comb: str, preprocess: bool, comp: bool=False): # clinroot is the path to the sheet that contains all the clinical data, including pcr. dataset is the dataset name e.g. NACT for the NACT pilot
     comb_list = comb.split('_')
+    s_phase = static_phase
     feature_objects = []
     extractor = featureextractor.RadiomicsFeatureExtractor()
     statrad = StaticRadiomics(extractor)
-    multirad = MultiphaseRadiomics(statrad)
+    multirad = MultiphaseRadiomics()
     timeseriesrad = TimeSeriesRadiomics(multirad)
     engineeredrad = EngineeredTempRadiomics(multirad)
 
@@ -148,7 +149,7 @@ def build_feature_table(dataset_name: str, num_phases: int, datapath: Path, clin
         if "E" in comb_list:
             # the following is needed to exclude the patients without acquisition times from the ENTIRE dataset so E can be used.
             if pd.isna(clinical_information.loc[patient_id, "acquisition_times"]):
-                continue
+                continue 
             time_res = ast.literal_eval(clinical_information.loc[patient_id, "acquisition_times"])  
             engineeredrad.apply_time_res(time_res)
 
@@ -156,8 +157,8 @@ def build_feature_table(dataset_name: str, num_phases: int, datapath: Path, clin
         if len(phase_paths) != num_phases:
             continue
 
-        for phase_path in phase_paths:
-            images[str(phase_number(phase_path, comp))] = read_nifti(phase_path)
+        #for phase_path in phase_paths:
+        #    images[str(phase_number(phase_path, comp))] = read_nifti(phase_path)
 
         mask = read_nifti(patient / 'mask.nii.gz')
 
@@ -165,9 +166,21 @@ def build_feature_table(dataset_name: str, num_phases: int, datapath: Path, clin
             images, mask = data_preprocess(images, mask)
 
         if "M" in comb_list or "E" in comb_list or "T" in comb_list: # since E and T depend on M extracting (for the time series table)
-            multirad.extract(images, mask)
+            features = defaultdict()
+
+            for i, path in enumerate(phase_paths): # this loop is equivalent to an "extract" method of the M, E, or T phase.
+                image = read_nifti(path)
+                one_features = statrad.extract(image, mask)
+                del image # saving space!
+                features[i] = one_features
+            #shape: features = {0: { }, 1: { }, 2: { }, etc.}
+
+            multirad.apply_features(features=features) # pushes features into M object, also necessary for E and T as they both pass in the M object.
+            
         if "S" in comb_list and "M" not in comb_list: #extracts the single phase radiomics
-            statrad.extract(images["1"], mask) #patient["phase1"] as placeholder logic for grabbing the decided phase. 
+            static_image = read_nifti(phase_paths[s_phase])
+            statrad.extract(static_image, mask) #patient["phase1"] as placeholder logic for grabbing the decided phase. 
+            del static_image
 
 
         del images

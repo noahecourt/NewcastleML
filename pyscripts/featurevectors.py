@@ -26,16 +26,11 @@ class StaticRadiomics:
 
 class MultiphaseRadiomics: # if using S + M then use only M
     # reminder that this class works using a deep static radiomics as well. if that is passed instead, this is DM rather than M
-    def __init__(self, single_pr: StaticRadiomics | DeepStaticRadiomics):
-        self.single_pr = single_pr 
+    def __init__(self):
         self.features = None
-    def extract(self, images, mask): # images being a dict of the phases, in order of phases
-        self.features = defaultdict() # pyradiomics outputs a dictionary
-        for key, value in images.items():
-            phase_features = self.single_pr.extract(value, mask)
-            self.features[key] = phase_features
-        #shape: features = {0: { }, 1: { }, 2: { }, etc.}
-        return self.features
+
+    def apply_features(self, features):
+        self.features = features
 
     def get_feature_vector(self):
         output = []
@@ -71,6 +66,8 @@ class MultiphaseRadiomics: # if using S + M then use only M
     def get_features(self):
         if self.features is not None:
             return self.features
+        else:
+            raise ValueError("no features here")
 
 
 class TimeSeriesRadiomics: # Note: the point of calling multi_pr is so that features can be extracted once per data, rather than for M, E, and T separately
@@ -115,13 +112,22 @@ class EngineeredTempRadiomics:
         self.time_res = tr
     
 
-
 #P excluding PK unless enough temporal resolution
 class ConvRadiomics:
-    def __init__(self, time_res: list): 
-
+    def __init__(self, time_res: list):
         self.time_res = time_res
         #time_res is list of times [1, 3, 5]s
+    def extract(images, mask, mode: str["SQ", "PK"]):
+        # images will be a sequential dictionary
+        # SQ features: time to peak, wash-in rate, initial rate of enhacement, signal enhancement ratio, post-peak washout slope, late enhancement ratio, initial area under the enhancement curve, curve class: plateau, washout, 
+        # PK likely needs a few things. focus on SQ first.
+
+        pass
+        
+        
+    def get_feature_vector():
+        pass
+
         
 class DeepStaticRadiomics:
     def __init__(self, encoder=pysera):
